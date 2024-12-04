@@ -1,67 +1,56 @@
 import pygame
-from mob import Mob
+import sys
 from player import Player
+from mob import Mob
 
-# Pygame setup
+# Initialize Pygame
 pygame.init()
-screen = pygame.display.set_mode((1280, 720))
-pygame.display.set_caption("Mob vs Player")
-clock = pygame.time.Clock()
-running = True
+CLOCK = pygame.time.Clock()
+SCREEN = pygame.display.set_mode((1280, 720))
+pygame.display.set_caption("Maplestory Jump")
 dt = 0  # Delta time
 
 # Load assets
-bg = pygame.image.load("assets/GCGreenhouse.jpg")
-pinkbean = pygame.image.load("assets/mob/standing.png")
-die = pygame.image.load("assets/mob/die.png")
+BACKGROUND = pygame.image.load("assets/GCGreenhouse.jpg")
+pinkbean = pygame.image.load("assets/mob/standing.png").convert_alpha()
+die_frames = [
+    pygame.image.load(f"assets/mob/die.png").convert_alpha()
+    for i in range(1, 5)
+]
 
-# Initialize player and mobs starting position
-player = Player(100, 510)  
+# Initialize player and mobs
+player = Player(600, 510)
 mobs = [
-    Mob(710, 490, pinkbean, die),
-    Mob(1080, 570, pinkbean, die),
-    Mob(630, 140, pinkbean, die),
+    Mob(710, 490, pinkbean, die_frames),
+    Mob(1080, 570, pinkbean, die_frames),
+    Mob(630, 140, pinkbean, die_frames),
 ]
 
 # Main game loop
-while running:
-    # Event handling
+while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            running = False
+            pygame.quit()
+            sys.exit()
 
-    # Player input
+    # Handle keyboard input
     keys = pygame.key.get_pressed()
-
-    # Update player and mobs
     player.update(keys, dt)
-    for critter in mobs:
-        critter.update()
 
-    # Check for collisions
-    for critter in Mob.alive_mobs:
-        in_x = (critter.x - 50) <= player.rect.centerx <= (critter.x + 50)
-        in_y = (critter.y - 50) <= player.rect.centery <= (critter.y + 50)
-        if in_x and in_y:
-            critter.remove()
+    # Update mobs (check collision with the player)
+    for mob in mobs:
+        # Check for collision (player jumping on top of mob)
+        if player.rect.colliderect(mob.rect) and player.rect.bottom <= mob.rect.top + 10 and player.jumping:
+            mob.die()  # Trigger the dying state when the player lands on the mob
 
-    # Check if all mobs are dead
-    if len(Mob.alive_mobs) == 0:
-        running = False
+        mob.update()
 
-    # Drawing
-    screen.fill("light pink")
-    screen.blit(bg, (0, 0))
-    player.draw(screen)
-    for critter in Mob.alive_mobs:
-        screen.blit(critter.alive_image, (critter.x, critter.y))
-    for critter in Mob.dead_mobs:
-        screen.blit(critter.dead_image, (critter.x, critter.y))
+    # Draw everything
+    SCREEN.blit(BACKGROUND, (0, 0))
+    player.draw(SCREEN)
+    for mob in mobs:
+        mob.draw(SCREEN)
 
-    # Update display
-    pygame.display.flip()
-
-    # Limit FPS and calculate delta time
-    dt = clock.tick(60) / 1000
-
-pygame.quit()
+    # Update the display and set frame rate
+    pygame.display.update()
+    dt = CLOCK.tick(60) / 1000  # Convert milliseconds to seconds
